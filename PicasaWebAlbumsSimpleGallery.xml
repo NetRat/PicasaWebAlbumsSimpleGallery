@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="Picasa Web Albums Simple Gallery: __UP_album__"
+    title_url="http://picasaweb.google.com/__UP_email__/__UP_album__"
+    directory_title="Picasa Web Albums Simple Gallery"
+    author="Vladimir Tarasow"
+    author_email="netrat@netrat.eu"
+    author_affiliation="NetRat"
+    author_location="Latvia"
+    category="Picasa Web Albums, Gallery"
+    description="Simple gallery gadget which is using Picasa Web Albums service as image storage. More details here: http://github.com/NetRat/PicasaWebAlbumsSimpleGallery"
+    author_link="http://about.me/NetRat">
+    <Require feature="dynamic-height"/>
+  </ModulePrefs>
+  <UserPref name="email" display_name="E-mail" required="true" default_value="picasaweb account here" />
+  <UserPref name="album" display_name="Picasa album name" datatype="string" required="true" default_value="Metal"/>
+  <UserPref name="rowsQnt" display_name="Rows quantity" datatype="string" required="true" default_value="2"/>
+  <UserPref name="columnsQnt" display_name="Columns quantity" datatype="string" required="true" default_value="3"/>
+  <UserPref name="cellSpacing" display_name="Cell spacing" datatype="string" required="true" default_value="6"/>
+  <UserPref name="backgroundColor" display_name="Background color" datatype="string" required="true" default_value="transparent"/>
+  <UserPref name="photoScale" display_name="Photo scale, %" datatype="string" required="true" default_value="100"/>
+  <UserPref name="photoDescShow" display_name="Show photo description" datatype="bool" required="true" default_value="false"/>
+  <UserPref name="photoDescHeight" display_name="Photo description height" datatype="string" required="false" default_value="30"/>
+  <UserPref name="photoBackgroundColor" display_name="Photo background color" datatype="string" required="true" default_value="transparent"/>
+  <UserPref name="pagerTopShow" display_name="Show pager on top" datatype="bool" required="true" default_value="true"/>
+  <UserPref name="pagerBottomShow" display_name="Show pager at bottom" datatype="bool" required="true" default_value="false"/>
+  <UserPref name="pagerStyle" display_name="Pager style" datatype="enum" required="true" default_value="arrows">
+    <EnumValue value="arrows" />
+    <EnumValue value="numbers" />
+  </UserPref>>
+  <UserPref name="pagerHeight" display_name="Pager height, px" datatype="string" required="true" default_value="20"/>
+  <UserPref name="pagerFontSize" display_name="Pager font size" datatype="enum" required="true" default_value="small">
+    <EnumValue value="large" />
+    <EnumValue value="larger" />
+    <EnumValue value="medium" />
+    <EnumValue value="small" />
+    <EnumValue value="smaller" />
+    <EnumValue value="x-large" />
+    <EnumValue value="x-small" />
+    <EnumValue value="xx-large" />
+    <EnumValue value="xx-small" />
+  </UserPref>>
+  <UserPref name="pagerFontColor" display_name="Pager font color" datatype="string" required="false" />
+  <UserPref name="pagerBackgroundColor" display_name="Pager background color" datatype="string" required="false" default_value="transparent"/>
+  <Content type="html">
+    <![CDATA[
+    <div id="content_div"></div>
+
+<style>
+  body {
+    background-color: transparent !important;
+  }
+  .img__MODULE_ID__ {
+    border-width:1px;
+  }
+  .arrow__MODULE_ID__ {
+    text-decoration:none;
+    font-size:larger;
+    cursor:pointer;
+    vertical-align:top;
+    margin-bottom:4px;
+  }
+  .pages__MODULE_ID__ {
+    text-decoration:none;
+    font-size:larger;
+    vertical-align:top;
+    margin-bottom:4px;
+  }
+  .sourceLink__MODULE_ID__ A:link {
+    color:#7777cc;
+  }
+  .sourceLink__MODULE_ID__ A:visited {
+    color:#7777cc;
+  }
+  #photoDiv__MODULE_ID__ {
+  }
+  #description__MODULE_ID__ {
+    padding-top:4px;
+    font-size:11px;
+    text-align:center;
+  }
+  #photoNum__MODULE_ID__ {
+    font-size:smaller;
+    padding-right:6px;
+    padding-left:6px;
+  }
+</style>                        
+                                                                        
+    <script type="text/javascript">
+      var _IMAGE_HEIGHT = 150;
+      var _MAX_TEXT_LEN = 2 * _IMAGE_HEIGHT / 5;
+      var _GPHOTO_NS = 'http://schemas.google.com/photos/2007';
+      var _MEDIA_NS = 'http://search.yahoo.com/mrss/';
+
+      var current_page = 0;
+      var num_pages = 1;
+      var num_photos = 0;
+      var prefs = new _IG_Prefs(__MODULE_ID__);
+      var email = _esc(prefs.getString('email'));
+      var album = _esc(prefs.getString('album'));
+      var _rowsQnt = parseInt(prefs.getString('rowsQnt'));
+      var _columnsQnt = parseInt(prefs.getString('columnsQnt'));
+      
+      var entryList = [];
+
+      var album_feed_url = 'http://picasaweb.google.com/data/feed/api' + 
+          '/user/' + email +
+          '/album/' + album + 
+          '?kind=photo';
+      
+      var pagerStyle = ''; 
+      if (prefs.getString('pagerFontSize').length > 0) {
+          pagerStyle += ('font-size:' + prefs.getString('pagerFontSize') + ';');
+      }
+      if (prefs.getString('pagerFontColor').length > 0) {
+          pagerStyle += ('color:' + prefs.getString('pagerFontColor') + ';');
+      }
+      if (prefs.getString('pagerBackgroundColor').length > 0) {
+          pagerStyle += ('background-color:' + prefs.getString('pagerBackgroundColor') + ';');
+      }
+      
+      // Calculating cell width.
+      var gadgetWidth = gadgets.window.getViewportDimensions().width;
+      var cellWidth = (gadgetWidth - prefs.getString('cellSpacing') * 
+        (prefs.getString('columnsQnt') - 1)) / prefs.getString('columnsQnt');
+
+      // Calculating cell height. 
+      var pagerQnt = 0;
+      if (prefs.getBool("pagerTopShow") == true) pagerQnt++;
+      if (prefs.getBool("pagerBottomShow") == true) pagerQnt++;
+      var gadgetHeight = gadgets.window.getViewportDimensions().height;
+      var cellHeight = 
+        (gadgetHeight - prefs.getString('cellSpacing') * (prefs.getString('rowsQnt') - 1) -
+        prefs.getString('cellSpacing') * pagerQnt - prefs.getString('pagerHeight') * pagerQnt) / prefs.getString('rowsQnt');
+
+      // Set the background color according to the backgroundColor userpref
+      var element = document.getElementById('content_div');  
+      element.style.backgroundColor=prefs.getString("backgroundColor");
+     
+     
+      function ShowInvalidPrefsMsg() {
+        _gel('content_div').innerHTML =
+             '<i>Please, review gadgets settings.</i>';
+      };
+               
+      function GetElementListItem(element, namespace, tagname, index){
+        var list_item;
+        if (namespace != '' && 
+            typeof document.getElementsByTagNameNS != 'undefined')
+          list_item = element.getElementsByTagNameNS(namespace, tagname)[index];
+        else {
+          if (namespace == _GPHOTO_NS)
+            tagname = 'gphoto:' + tagname;
+          else if (namespace == _MEDIA_NS)
+            tagname = 'media:' + tagname;          
+          list_item = element.getElementsByTagName(tagname)[index];
+        }
+        return list_item;
+      }; 
+      
+      function GetChildElementValue(element, namespace, tagname){
+        var child_element = GetElementListItem(element, namespace, tagname, 0);
+        if (child_element && child_element.firstChild){
+          return child_element.firstChild.nodeValue;
+        }
+        return '';
+      }; 
+      
+      function prevPage(){
+        if (current_page > 0)
+            current_page -= 1;
+        RefreshPage();
+      };
+      
+      function nextPage(){      
+        if (current_page < num_pages -1)
+          current_page += 1;
+        RefreshPage();
+      };
+      
+      function goToPage(i){      
+        current_page = i;
+        RefreshPage();
+      };
+        
+      function GetHtmlForNavigation(){
+        var html = '';
+        if (num_pages > 1) {
+          html += 
+            '<tr>' +
+            '<td colspan="' + _columnsQnt + '" align="center" valign="middle" height="' + 
+            parseInt(prefs.getString('pagerHeight')) + 'px" style="' + pagerStyle + '">'; 
+          if (prefs.getString('pagerStyle') == 'arrows') {
+            html += ('<span class="arrow__MODULE_ID__" onclick="prevPage()">&laquo;</span>' +
+            '<span class="pages__MODULE_ID__">&nbsp;' + (current_page + 1) + '&nbsp;of&nbsp;' + num_pages + '&nbsp;</span>' +
+            '<span class="arrow__MODULE_ID__" onclick="nextPage()">&raquo;</span></td>');
+          }
+          else {
+            for (var i = 0; i < (num_pages - 1); i++)
+              html += ('<span class="arrow__MODULE_ID__" onclick="goToPage(' + i + ')">' + (i + 1) + '</span>&nbsp;');
+            html += ('<span class="arrow__MODULE_ID__" onclick="goToPage(' + (num_pages - 1) + ')">' + num_pages + '</span></td>');
+          }
+        }
+        html += '</tr>';
+        return html;
+      };
+      
+      function GetHtmlForPhotoDesc(photoDesc, href){
+        var shortPhotoDesc = photoDesc;
+        if (photoDesc.length == 0)
+          shortPhotoDesc = '&nbsp;<br>&nbsp;';
+        else if (photoDesc.length < _MAX_TEXT_LEN / 2)
+          shortPhotoDesc = photoDesc + '<br>&nbsp;';
+        else if (photoDesc.length > _MAX_TEXT_LEN)
+          shortPhotoDesc = photoDesc.substring(0, _MAX_TEXT_LEN) + '...';
+        var html = '<small><a style="text-decoration: none; color: #333333;" href="' + 
+            href + '" target="_top" >'+
+            shortPhotoDesc + '</a></small>';
+        return html;
+      };
+      
+      function GetHtmlForPhotoImage(imgSrc, imgHeight, imgWidth) { //photoDescHeight
+        var html = '<img src="' + imgSrc + 
+          '" style="border-style: none"';
+        if (cellWidth >= cellHeight) {
+            if (prefs.getString("photoDescHeight").length > 0) 
+              html += (' height="' + ((cellHeight - prefs.getString("photoDescHeight") - 2) / 100 * prefs.getString('photoScale')) + 'px">');
+            else
+              html += (' height="' + ((cellHeight - 2) / 100 * prefs.getString('photoScale')) + 'px">');
+        }
+        else {
+          // if (imgWidth >= cellWidth) imgWidth = cellWidth;
+          html += (' width="' + ((cellWidth - 2) / 100 * prefs.getString('photoScale')) + 'px">');
+        }
+        return html;
+      };
+      
+      function GetHtmlForPhoto(photoDesc, imgSrc, imgHeight, imgWidth, href){
+        var html = 
+            '<a href="' + href + '" target="_blank" ' + 
+            //'onMouseover="fixedtooltip(\'' + photoDesc + '\')" ' + 
+            //'onMouseout="delayhidetip()" ' +
+            'title="' + photoDesc + '" ' + 
+            '>' +
+            GetHtmlForPhotoImage(imgSrc, imgHeight, imgWidth) + 
+            '</a>';
+         if (prefs.getBool("photoDescShow") == true)
+           html += '<div align="center" style="height:' + 
+              prefs.getString("photoDescHeight") + 'px;">' + 
+              GetHtmlForPhotoDesc(photoDesc, href) + '</div>';
+        return html;
+      };
+            
+      function GetHtmlHeader(){
+        var html = '<div align="center">' + 
+          '<table border="0" cellpadding="0" cellspacing="6" width="' + gadgetWidth + '">';
+        if (prefs.getBool("pagerTopShow") == true) {
+          html += GetHtmlForNavigation();
+        }
+        return html;
+      };
+      
+      function GetHtmlFooter(){
+        var html = '';
+        if (prefs.getBool("pagerBottomShow") == true) {
+          html += GetHtmlForNavigation();
+        }
+        html += '</table></div>';
+        return html;
+      };
+      
+      function GetPrePhotoHtml(index){
+        var html = '';
+        if (index % _columnsQnt == 0){
+          html += '<tr>';
+        }
+        html += '<td align="center" height="' + cellHeight + '" width="' + cellWidth + '" ';
+        if (prefs.getString("photoBackgroundColor").length > 0)
+          html += 'style="background-color:' + prefs.getString("photoBackgroundColor") + ';">';
+        else
+          html += '>';
+        return html;
+      };
+      
+      function GetPostPhotoHtml(index){
+        var html = '</td>';
+        if (index % _columnsQnt == _columnsQnt-1 || index == num_photos){
+          html += '</tr>';
+        }
+        return html;
+      };
+ 
+
+      _IG_FetchXmlContent(album_feed_url, function (response) {
+        if (!response || typeof(response) != 'object' || !response.firstChild ) {
+          ShowInvalidPrefsMsg();
+          return;
+        }
+        entryList = response.getElementsByTagName('entry');
+        num_photos = entryList.length;
+        num_pages = Math.ceil(num_photos / (_rowsQnt * _columnsQnt));
+        RefreshPage();
+      });
+      
+      function RefreshPage(){
+        var html = '';
+        html += GetHtmlHeader();
+        var photos_per_page = _rowsQnt * _columnsQnt;
+        var start_index = current_page * photos_per_page;
+        var stop_index = start_index + photos_per_page;
+        if (stop_index > num_photos)
+          stop_index = num_photos;
+        for (var i = start_index; i < stop_index; i++){
+          var photoTitle = GetChildElementValue(entryList[i], '', 'title');
+          var photoDesc = GetChildElementValue(entryList[i], '', 'summary');
+          var photoID = GetChildElementValue(entryList[i], _GPHOTO_NS, 'id');
+          var imgSrc = GetElementListItem(entryList[i], _MEDIA_NS, 'thumbnail', 2).getAttribute('url');
+          var imgHeight = GetElementListItem(entryList[i], _MEDIA_NS, 'thumbnail', 2).getAttribute('height');
+          var imgWidth = GetElementListItem(entryList[i], _MEDIA_NS, 'thumbnail', 2).getAttribute('width');
+          var href = GetElementListItem(entryList[i], '', 'link', 1).getAttribute('href');
+          href = href.replace(photoID, 'slideshow/' + photoID);
+          href = href.replace('#', '?noredirect=1#')
+          html += GetPrePhotoHtml(i);
+          html += GetHtmlForPhoto(photoDesc, imgSrc, imgHeight, imgWidth, href);          
+          html += GetPostPhotoHtml(i);
+        }
+        html += GetHtmlFooter();
+        _gel('content_div').innerHTML = html;
+        _IG_AdjustIFrameHeight();
+      };
+
+      //_IG_RegisterOnloadHandler(RefreshPage);
+    </script>
+  ]]>
+  </Content>
+</Module>
