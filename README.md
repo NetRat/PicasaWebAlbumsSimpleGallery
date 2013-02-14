@@ -24,4 +24,4 @@ Settings:
 + *pagerBackgroundColor* - Background color of the pager. Use value 'transparent' for transparency.
 
 ## How to embed
-The first step is to copy _PicasaWebAlbumsSimpleGallery.xml_ to your Google Site. After that use *Insert - More Gadgets…* when editing the Google Sites page, then select *Add gadget by URL* and copy the following URL into textbox: http://<Your Google Site>/PicasaWebAlbumsSimpleGallery.xml
+The first step is to copy _PicasaWebAlbumsSimpleGallery.xml_ to your Google Site. After that use **Insert - More Gadgets…** when editing the Google Sites page, then select **Add gadget by URL** and copy the following URL into textbox: _http://YourGoogleSite/PicasaWebAlbumsSimpleGallery.xml_
